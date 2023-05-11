@@ -12,8 +12,15 @@ RUN cd /root && wget -O go.tgz "https://dl.google.com/go/go$GOLANG_VERSION.linux
 ENV GOPATH /root/go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
+# build grpc v1.44.0
+RUN cd /root && git clone -b v1.44.0 https://github.com/grpc/grpc && cd grpc && git submodule update --init && \
+        mkdir -p cmake/build && cd cmake/build && cmake ../.. -DBUILD_SHARED_LIBS=ON && make install -j10
+
+# build mock-tikv
 RUN cd /root && git clone https://github.com/tikv/mock-tikv.git && cd mock-tikv && git checkout 388e21d3bab5d3c4d3ce26e643ab7453188b0288 && \
 	go get google.golang.org/grpc/internal/channelz@v1.24.0 && make failpoint-enable && make
+
+# build client-c
 RUN cd /root && git clone https://github.com/tikv/client-c.git && \
 	cd client-c && sed -i 's/Protobuf_LIBRARY/Protobuf_LIBRARIES/g' src/CMakeLists.txt && \
 	git submodule update --init --recursive && mkdir build && cd build && cmake ../ -DENABLE_TESTS=On && make kv_client_ut -j5
